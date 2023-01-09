@@ -9,7 +9,6 @@ from utils.logger import *
 from extensions.chamfer_dist import ChamferDistanceL1, ChamferDistanceL2
 from pytorch3d.loss import chamfer_distance
 from pytorch3d.ops import knn_points, knn_gather
-from models.pointnet2_utils import PointNetFeaturePropagation
 
 class Encoder(nn.Module):   ## Embedding module
     def __init__(self, encoder_channel, group_size):
@@ -434,22 +433,6 @@ class PointTransformer(nn.Module):
               self.cls_head_finetune = nn.Sequential(nn.Linear(self.trans_dim * 2, self.cls_dim))
               self.apply(self._init_weights)
 
-        elif self.task == "segmentation" or self.task == "offset":
-            num_input_features = config.use_feature_prop * 1024 + config.use_token_features * 1152 + config.use_global_features * 1152 * 2
-            self.lossweight = torch.tensor([1, 2]).float().cuda()
-
-            self.use_feature_prop = config.use_feature_prop
-            self.use_token_features = config.use_token_features 
-            self.use_global_features = config.use_global_features
-            if self.use_feature_prop:
-                self.propagation_0 = PointNetFeaturePropagation(in_channel=1152 + 3, mlp=[self.trans_dim * 4, 1024])
-            self.convs1 = nn.Conv1d(num_input_features, 512, 1) #4480 3328 2176 1152
-            self.dp1 = nn.Dropout(0)
-            self.convs2 = nn.Conv1d(512, 256, 1)
-            self.convs3 = nn.Conv1d(256 + 3, self.cls_dim, 1)
-            self.bns1 = nn.BatchNorm1d(512)
-            self.bns2 = nn.BatchNorm1d(256)
-            self.relu = nn.ReLU()
         self.build_loss_func(config.label_smoothing if self.task == "cls" else None)
 
     def _init_weights(self, m):
@@ -463,33 +446,13 @@ class PointTransformer(nn.Module):
         elif isinstance(m, nn.Conv1d):
             trunc_normal_(m.weight, std=.02)
             if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        
+                nn.init.constant_(m.bias, 0)      
 
     def build_loss_func(self, label_smoothing=None):
         if self.task == "cls":
             self.loss_ce = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
         elif self.task == "regression":
             self.loss_ce = torch.nn.MSELoss()
-        elif self.task == "segmentation":
-            self.loss_ce = self.seg_loss
-        elif self.task == "offset":
-            self.loss_ce = self.offset_loss
-    
-    def offset_loss(self, prediction, gt, get_l1=True):
-        prediction = prediction.contiguous().view(-1, 3)
-        gt = gt.contiguous().view(-1, 3)
-        mask = gt[:, 0] != 14985
-        prediction, gt = prediction[mask], gt[mask]
-        if get_l1:
-            return F.l1_loss(prediction, gt) * 3
-        return F.pairwise_distance(prediction, gt).mean()
-
-
-    def seg_loss(self, prediction, label):
-        prediction = prediction.contiguous().view(-1, 2)
-        label = label.view(-1, 1)[:, 0].long()
-        return F.nll_loss(prediction, label, weight=self.lossweight)
 
     def get_loss_acc(self, ret, gt):
         loss = self.loss_ce(ret, gt.long())
@@ -556,10 +519,7 @@ class PointTransformer(nn.Module):
 
 
     def forward(self, *args):
-        if self.task == "regression" or self.task == "cls":
-            return self.cls_forward(*args)
-        elif self.task == "segmentation" or self.task == "offset":
-            return self.pointwise_forward(*args)
+        return self.cls_forward(*args)
 
     def cls_forward(self, neighborhood, center):
         group_input_tokens = self.encoder(neighborhood)  # B G N
@@ -574,40 +534,3 @@ class PointTransformer(nn.Module):
         concat_f = torch.cat([x[:, 0], x[:, 1:].max(1)[0]], dim=-1)
         ret = self.cls_head_finetune(concat_f)
         return ret
-
-    def pointwise_forward(self, neighborhood, center, pts, idx):
-        B, G, P, C = neighborhood.shape
-        N = pts.shape[1]
-        x = self.encoder(neighborhood)  # B G N
-        pos = self.pos_embed(center)
-        # transformer
-        feature_list = self.blocks.forward_seg(x, pos)
-        feature_list = [self.norm(x).transpose(-1, -2).contiguous() for x in feature_list]
-        x = torch.cat((feature_list[0],feature_list[1],feature_list[2]), dim=1) #B 3*384 G
-        generated_features = []
-        # these are global features and equal for every point
-        if self.use_global_features:
-            x_max_feature = torch.max(x,2)[0].view(B, -1).unsqueeze(-1).repeat(1, 1, N).permute(0,2,1)
-            x_avg_feature = torch.mean(x,2).view(B, -1).unsqueeze(-1).repeat(1, 1, N).permute(0,2,1)
-            generated_features.append(x_max_feature.permute(0,2,1))
-            generated_features.append(x_avg_feature.permute(0,2,1))
-        if self.use_token_features:
-            _, idx, _ = knn_points(pts, center, K=1)
-            feature = knn_gather(x.permute(0,2,1), idx)[:,:, 0,:]
-            generated_features.append(feature.permute(0,2,1))
-        if self.use_feature_prop:
-            f_level_0 = self.propagation_0(pts.transpose(-1, -2), center.transpose(-1, -2), pts.transpose(-1, -2), x) # B x 1024 x N
-            generated_features.append(f_level_0)
-            
-        x = torch.cat((generated_features), 1)
-        x = self.relu(self.bns1(self.convs1(x)))
-        x = self.dp1(x)
-        x = self.relu(self.bns2(self.convs2(x)))
-        x = self.convs3(torch.cat((x, pts.permute(0,2,1)), 1))
-        if self.task == "segmentation":
-            x = F.log_softmax(x, dim=2)
-        #assert not torch.any(torch.isnan(x))
-        x = x.permute(0, 2, 1)
-        return x
-
-

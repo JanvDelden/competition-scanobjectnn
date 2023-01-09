@@ -2,7 +2,7 @@
 
 ## 0. Description 
 
-The presented approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In Point-Mae, the point cloud is first partitioned into patches via farthest point sampling. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed as tokens with a standard transformer. The transformer is set up as an encoder and a decoder to enable the self-supervised pretraining, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). In this repository, I present a novel data augmentation, that yields accuracy improvements over all ScanObjectNN benchmarks of more than 1 %. For the data augmentation, patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. In result, the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds  when other objects occlude regions of the scanned objects. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no patch dropout over all variations of ScanObjectNN.
+The presented approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In Point-Mae, the point cloud is first partitioned into patches via farthest point sampling. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed as tokens with a standard transformer. The transformer is set up as an encoder and a decoder to enable the self-supervised pretraining, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). In this repository, I present a novel data augmentation, called patch dropout. For patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. In result, the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds when other objects occlude regions of the scanned objects. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no patch dropout over all variations of ScanObjectNN. In comparison to the original Point-MAE, the accuracy is improved by 4.4 % for PB-T50-RS.
 
 
 * Liu, Y., Matsoukas, C., Strand, F., Azizpour, H., and Smith, K. Patch Dropout: Economizing Vision Transformers Using Patch Dropout. 2022. 10.48550/arxiv.2208.07220.
@@ -47,10 +47,10 @@ Dropout rate | T25 | T25R | T50R | T50RS
 0.0 | 90.4 | 89.5 | 88.3 | 88.1
 0.3 | 89.7 | 90.0 | 88.5 | 89.0
 0.7 | 91.4 | 89.9 | 88.8 | 88.7
-0.9 | 91.7 | 90.6 | 89.8 | 89.56
+0.9 | 91.7 | 90.6 | 89.8 | 89.6
 
 
 
 ## Acknowledgements
 
-The code is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE), [Point-BERT](https://github.com/lulutang0608/Point-BERT), [Pointnet2_PyTorch](https://github.com/erikwijmans/Pointnet2_PyTorch) and [Pointnet_Pointnet2_pytorch](https://github.com/yanx27/Pointnet_Pointnet2_pytorch).
+The code is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) and [Point-BERT](https://github.com/lulutang0608/Point-BERT).
