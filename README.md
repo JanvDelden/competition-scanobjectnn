@@ -1,23 +1,21 @@
 # Forest-Point-MAE for ScanObjectNN
 
-## Self-supervised Learning on 3D Data with Masked Autoencoders
-
-
 ## 0. Description 
 
+The presented approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In Point-Mae, the point cloud is first partitioned into patches via farthest point sampling. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed as tokens with a standard transformer. The transformer is set up as an encoder and a decoder to enable the self-supervised pretraining, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). In this repository, I present a novel data augmentation, that yields accuracy improvements over all ScanObjectNN benchmarks of more than 1 %. For the data augmentation, patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. In result, the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds  when other objects occlude regions of the scanned objects. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no patch dropout over all variations of ScanObjectNN.
 
-This approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In a first step, the point cloud is partitioned into patches via the farthest point sampling algorithm. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed with as tokens with a standard transformer in an encoder/decoder design. The encoder/decoder design is a result of the self-supervised pretraining setup, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). The new part in this approach lies in a novel data augmentation, that yields accuracy improvements over all ScanObjectNN benchmarks of more than 1 %. For the data augmentation, patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. And the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds for example because of occlusion. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no Patch Dropout over all variation of ScanObjectNN.
 
-
-*Liu, Y., Matsoukas, C., Strand, F., Azizpour, H., and Smith, K. Patch Dropout: Economizing Vision Transformers Using Patch Dropout. 2022. 10.48550/arxiv.2208.07220.
-*Qi, C. R., Su, H., Mo, K., and Guibas, L. J. Pointnet: Deep learning on point sets for 3d classification and segmentation. In: Proceedings of the IEEE conference on computer vision and pattern recognition. 2017, pp. 652-660.
-*Pang, Y., Wang, W., Tay, F. E. H., Liu, W., Tian, Y., and Yuan, L. Masked Autoencoders for Point Cloud Self-supervised Learning. 2022. 10.48550/arxiv.2203.06604.
+* Liu, Y., Matsoukas, C., Strand, F., Azizpour, H., and Smith, K. Patch Dropout: Economizing Vision Transformers Using Patch Dropout. 2022. 10.48550/arxiv.2208.07220.
+* Pang, Y., Wang, W., Tay, F. E. H., Liu, W., Tian, Y., and Yuan, L. Masked Autoencoders for Point Cloud Self-supervised Learning. 2022. 10.48550/arxiv.2203.06604.
+* Qi, C. R., Su, H., Mo, K., and Guibas, L. J. Pointnet: Deep learning on point sets for 3d classification and segmentation. In: Proceedings of the IEEE conference on computer vision and pattern recognition. 2017, pp. 652-660.
 
 
 ## 1. Setup
 
 ```
 bash scripts/setup.sh
+conda activate pointmae_environment
+
 ```
 
 The data must be stored in data/scanobjectnn in the main project folder.
