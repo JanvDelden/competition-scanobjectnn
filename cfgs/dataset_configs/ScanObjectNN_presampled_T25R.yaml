@@ -1,0 +1,4 @@
+NAME: ScanObjectNN_presampled
+ROOT: data/scanobjectnn/h5_files/main_split
+train_file: training_objectdataset_augmented25rot.h5
+test_file: test_objectdataset_augmented25rot.h5

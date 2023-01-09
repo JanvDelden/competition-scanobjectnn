@@ -1,0 +1,14 @@
+*/__pycache__
+*.pth
+data/
+best/
+/.idea/
+experiments/
+dist/
+build/
+*.egg-info/
+*.html
+vis/
+wandb/
+custom/plot
+extensions/
