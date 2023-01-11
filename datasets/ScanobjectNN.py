@@ -20,6 +20,12 @@ train_transforms = transforms.Compose(
         data_transforms.PointcloudScaleAndTranslate(scale_low=2./3., scale_high=3./2., translate_range=0.2),
         data_transforms.RandomHorizontalFlip()
     ])
+
+vote_transforms = transforms.Compose(
+    [
+        data_transforms.RandomHorizontalFlip()
+    ])
+
 token_transforms = transforms.Compose(
     [
         data_transforms.PatchDropout(max_ratio=0.9),
@@ -118,6 +124,7 @@ pretrain_transforms = transforms.Compose(
         data_transforms.PointcloudScaleAndTranslate(scale_low=2./3., scale_high=3./2., translate_range=0.2),
         data_transforms.RandomHorizontalFlip()
     ])
+
 @DATASETS.register_module()
 class ScanObjectNN_presampled(Dataset):
     def __init__(self, args, config):
@@ -138,13 +145,17 @@ class ScanObjectNN_presampled(Dataset):
             data_file = config.train_file
             self.transforms = train_transforms
             if self.task == "cls":
-                self.token_transforms =transforms.Compose([data_transforms.PatchDropout(max_ratio=args.patch_dropout)])
+                self.token_transforms = transforms.Compose([data_transforms.PatchDropout(max_ratio=args.patch_dropout)])
             else:
                 self.token_transforms = test_transforms
         elif self.subset == 'test':
             data_file = config.test_file
-            self.transforms = test_transforms
-            self.token_transforms = test_transforms
+            if not args.vote:
+                self.transforms = test_transforms
+                self.token_transforms = test_transforms
+            else:
+                self.transforms = vote_transforms
+                self.token_transforms = test_transforms
         else:
             raise NotImplementedError()
         h5 = h5py.File(os.path.join(self.root, data_file), 'r')

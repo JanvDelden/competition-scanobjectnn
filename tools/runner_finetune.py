@@ -105,38 +105,51 @@ def validate(base_model, test_dataloader, epoch, args, config, logger = None):
     wandb.log({'Validation Accuracy':oAcc, 'Validation Loss': np.mean(losses), 'Validation mean Accuracy': mAcc, 'Epoch': epoch})
     return Acc_Metric(oAcc), test_pred, test_label, np.mean(losses)
 
+from torchvision import transforms
+from datasets import data_transforms
+
+vote_transforms = transforms.Compose(
+    [
+        data_transforms.PointcloudRotate(alternate_rot_axis=True),
+        data_transforms.PointcloudScaleAndTranslate(scale_low=2./3., scale_high=3./2., translate_range=0.2),
+        data_transforms.RandomHorizontalFlip()
+    ])
+
 
 def test_cls(args, config):
     base_model, train_dataloader, test_dataloader, optimizer, scheduler, logger, config, start_epoch\
          = builder.prepare_process(args, config)
     times = 10
-    vote = False
     base_model.eval()  
     test_pred, test_label, losses  = [], [], []
 
     with torch.no_grad():
-        for idx, (neighborhood, center, label) in enumerate(test_dataloader):
-            neighborhood, center, label = neighborhood.cuda(), center.cuda(), label.cuda()
-            if args.fewshot:
-                label[label == 4] = 3
+        for i in range(len(test_dataloader.dataset)):
+            same_item_dataset = torch.utils.data.Subset(test_dataloader.dataset, [i]*times)
+            loader = torch.utils.data.DataLoader(same_item_dataset, batch_size=times, shuffle=False)
+            neighborhood, center, label = next(iter(loader))
+            neighborhood, center, label = neighborhood.cuda(), center.cuda(), label.cuda()[0]
             prediction = base_model(neighborhood, center)
-            loss, acc = base_model.module.get_loss_acc(prediction, label)
-            losses.append(loss.item())
+            #prediction = prediction.mean(0)
+            prediction = prediction.argmax(-1).view(-1)
+            prediction = torch.mode(prediction)[0].detach().item()
+
+            #loss, acc = base_model.module.get_loss_acc(prediction, label)
+            #losses.append(loss.item())
             target = label.view(-1)
-            pred = prediction.argmax(-1).view(-1)
 
-            test_pred.append(pred.detach())
+            test_pred.append(prediction)
             test_label.append(target.detach())
+            #if i % 100 == 0:
+            #    print(i)
 
-        test_pred = torch.cat(test_pred, dim=0)
+        test_pred = torch.tensor(test_pred)
         test_label = torch.cat(test_label, dim=0)
         oAcc = metrics.accuracy_score(test_label.detach().cpu().numpy(), test_pred.detach().cpu().numpy()) * 100
         mAcc = metrics.balanced_accuracy_score(test_label.detach().cpu().numpy(), test_pred.detach().cpu().numpy()) * 100
         path = os.path.join(args.experiment_path)
         np.save(os.path.join(path, "predictions.npy"), test_pred.cpu().numpy())
         np.save(os.path.join(path, "labels.npy"), test_label.cpu().numpy())
-        print_log('[Testing]  oAcc = %.4f, mAcc = %.4f,loss = %.4f' % (oAcc, mAcc, np.mean(losses)), logger=logger)
-
-        wandb.log({'Test Accuracy':oAcc, 'Test Loss': np.mean(losses), 'Test mean Accuracy': mAcc})
+        print_log('[Testing]  oAcc = %.4f, mAcc = %.4f' % (oAcc, mAcc), logger=logger)
     return 
 

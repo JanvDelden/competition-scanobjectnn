@@ -2,7 +2,7 @@
 
 ## 0. Description 
 
-The presented approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In Point-Mae, the point cloud is first partitioned into patches via farthest point sampling. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed as tokens with a standard transformer. The transformer is set up as an encoder and a decoder to enable the self-supervised pretraining, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). In this repository, I present a novel data augmentation, called patch dropout. For patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. In result, the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds when other objects occlude regions of the scanned objects. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no patch dropout over all variations of ScanObjectNN. In comparison to the original Point-MAE, the accuracy is improved by 4.4 % for PB-T50-RS.
+The presented approach to point cloud classification is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) (Pang et al., 2022). In Point-MAE, the point cloud is first partitioned into patches via farthest point sampling. Those patches are then encoded with a Mini-PointNet (Qi et al., 2017). and processed as tokens with a standard transformer. The transformer is set up as an encoder and a decoder to enable the self-supervised pretraining, that is identical to Point-MAE and employs the ShapeNet dataset (Chang et al., 2015). In this repository, I present a novel data augmentation, called patch dropout. For patch dropout, after partitioning the point cloud into patches a random ratio of those patches is set to the first patch. With this, those patches become effectively invisible to the network. In result, the network is presented with a point cloud with “holes” in it. This makes the classification task harder and similar holes might also occur in other scanned point clouds when other objects occlude regions of the scanned objects. For image vision transformers, it was shown that a similar augmentation is especially useful in making a model more robust to missing data (Liu et al., 2022). I find that a maximum dropout ratio of 90 % of the patches leads to the highest increase in accuracy of more than 1 % in comparison to no patch dropout over all variations of ScanObjectNN. In comparison to the original Point-MAE, the accuracy is improved by 4.4 % for PB-T50-RS.
 
 
 * Liu, Y., Matsoukas, C., Strand, F., Azizpour, H., and Smith, K. Patch Dropout: Economizing Vision Transformers Using Patch Dropout. 2022. 10.48550/arxiv.2208.07220.
@@ -15,7 +15,6 @@ The presented approach to point cloud classification is mainly based upon [Point
 ```
 bash scripts/setup.sh
 conda activate pointmae_environment
-
 ```
 
 The data must be stored in data/scanobjectnn in the main project folder.
@@ -49,8 +48,17 @@ Dropout rate | T25 | T25R | T50R | T50RS
 0.7 | 91.4 | 89.9 | 88.8 | 88.7
 0.9 | 91.7 | 90.6 | 89.8 | 89.6
 
+Using a high patch dropout ratio of 0.9 yields the best results across all dataset variations. Additionally, by combining the predictions from multiple different partitions of the same sample during testing, the results can be further improved. This can be achieved using just one trained model.
 
+```
+bash scripts/test.sh
+```
 
-## Acknowledgements
+Replace the path to the checkpoint in the test.sh file to test out different trainings.
+
+Measure | T25 | T25R | T50R | T50RS
+--- | --- | --- | --- | --- 
+Overall accuracy | 92.0 | 90.6 | 89.5 | 89.8
+Mean per class accuracy | 90.8 | 90.0 | 87.7 | 88.7
 
 The code is mainly based upon [Point-MAE](https://github.com/Pang-Yatian/Point-MAE) and [Point-BERT](https://github.com/lulutang0608/Point-BERT).

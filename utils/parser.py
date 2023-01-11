@@ -14,6 +14,7 @@ def get_args(argv = None):
     parser.add_argument('--ckpts', type = str, default=None, help = 'test used ckpt path')
     parser.add_argument('--patch_dropout', type = float, default=0, help = "none")
     parser.add_argument('--no_wandb', action='store_true', default=True, help = 'dont use wandb')
+    parser.add_argument('--vote', action='store_true', default=False, help = 'use voting in testing mode')
     
     # task
     parser.add_argument('--test',         action='store_true', default=False, help = 'test mode for certain ckpt')
