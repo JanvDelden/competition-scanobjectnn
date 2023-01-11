@@ -48,7 +48,7 @@ Dropout rate | T25 | T25R | T50R | T50RS
 0.7 | 91.4 | 89.9 | 88.8 | 88.7
 0.9 | 91.7 | 90.6 | 89.8 | 89.6
 
-Using a high patch dropout ratio of 0.9 yields the best results across all dataset variations. Additionally, by combining the predictions from multiple different partitions of the same sample during testing, the results can be further improved. This can be achieved using just one trained model.
+Using a high patch dropout ratio of 0.9 yields the best results across all dataset variations. Additionally, by combining the predictions from multiple different partitions of the same sample during testing, the results can be further improved. To evaluate the already trained models with this method, run: 
 
 ```
 bash scripts/test.sh
